@@ -1,0 +1,17 @@
+.slick-dots.custom-dots li button:before {
+    content: "";
+    display: inline-block;
+    width: 20px; /* Length of the line */
+    height: 2px; /* Thickness of the line */
+    background-color: #ccc; /* Line color */
+    border-radius: 1px;
+  }
+  
+  .slick-dots.custom-dots li.slick-active button:before {
+    background-color: #007bff; /* Active line color */
+  }
+  
+  .slick-dots.custom-dots {
+    margin-top: 10px; /* Adjust spacing if needed */
+  }
+  

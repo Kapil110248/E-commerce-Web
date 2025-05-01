@@ -1,0 +1,27 @@
+.dynamic-button {
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    border: none;
+    border-radius: 5px;
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .primary {
+    background-color: #3498db;
+    color: white;
+  }
+  
+  .secondary {
+    background-color: #2ecc71;
+    color: white;
+  }
+  
+  .warning {
+    background-color: #e74c3c;
+    color: white;
+  }
+  
+  .dynamic-button:hover {
+    transform: scale(1.05);
+  }
