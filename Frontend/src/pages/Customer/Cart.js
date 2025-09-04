@@ -6,41 +6,41 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 import cartService from "../../services/cartService";
+import wishlistService from "../../services/wishlistService";
+import { useAuth } from "../../context/AuthContext"; // ✅ token lene ke liye
 
 const Cart = ({ wishlist, setWishlist }) => {
   const [cart, setCart] = useState([]);
   const [actionItemIndex, setActionItemIndex] = useState(null);
   const navigate = useNavigate();
 
+  const { user } = useAuth();
+  const token = user?.token;
+
   // 🛒 Fetch cart from backend on page load
   useEffect(() => {
     const fetchCart = async () => {
       try {
-        const data = await cartService.getCart();
-
-        console.log("Fetched cart data:", data);
-
-        if (Array.isArray(data.cart)) {
-          setCart(data.cart);
-        } else if (data.cart?.items && Array.isArray(data.cart.items)) {
-          setCart(data.cart.items);
-        } else {
-          setCart([]);
-        }
+        if (!token) return;
+        const data = await cartService.getCart(token);
+        setCart(Array.isArray(data) ? data : data.cart || []);
       } catch (error) {
         console.error("Error fetching cart:", error);
         toast.error("Failed to load cart!");
       }
     };
     fetchCart();
-  }, []);
+  }, [token]);
 
-  // 🗑 Remove item from cart
+  // 🗑 Remove item
   const handleRemoveFromCart = async (productId, index) => {
     try {
-      const updated = await cartService.removeFromCart(productId);
-      console.log("Updated Cart after remove:", updated);
-      setCart(updated.cart || []);
+      if (!token) {
+        toast.error("Please login first!");
+        return;
+      }
+      const updated = await cartService.removeFromCart(productId, token);
+      setCart(Array.isArray(updated) ? updated : updated.cart || []);
       setActionItemIndex(null);
       toast.success("Item removed from the cart!");
     } catch (error) {
@@ -49,20 +49,34 @@ const Cart = ({ wishlist, setWishlist }) => {
     }
   };
 
-  // ❤️ Add item to wishlist
-  const handleAddToWishlist = (item, index) => {
-    setWishlist((prevWishlist) => [...prevWishlist, item]);
-    setCart(cart.filter((_, i) => i !== index));
-    setActionItemIndex(null);
-    toast.success(`${item.product?.name} has been added to your Wishlist!`);
+  // ❤️ Add to wishlist (with backend)
+  const handleAddToWishlist = async (item, index) => {
+    try {
+      if (!token) {
+        toast.error("Please login first!");
+        return;
+      }
+
+      // ✅ Add product to wishlist
+      const updated = await wishlistService.addToWishlist(item.product._id, token);
+      setWishlist(updated.wishlist || []);
+
+      // ✅ Remove product from cart
+      await handleRemoveFromCart(item.product._id, index);
+
+      toast.success(`${item.product?.name} added to Wishlist!`);
+    } catch (error) {
+      console.error("Error adding to wishlist:", error.response?.data || error);
+      toast.error("Failed to add to wishlist!");
+    }
   };
 
-  // 📄 Navigate to Product Details
+  // 📄 Product details
   const handleItemClick = (item) => {
     navigate("/product-details", { state: { product: item.product } });
   };
 
-  // 🔢 Calculate grand total
+  // 🔢 Grand total
   const grandTotal = cart.reduce(
     (sum, item) => sum + (item.product?.price || 0) * (item.quantity || 1),
     0
@@ -91,7 +105,6 @@ const Cart = ({ wishlist, setWishlist }) => {
                   onClick={() => handleItemClick(item)}
                 >
                   <div className="d-flex align-items-center">
-                    {/* Product Image */}
                     <img
                       src={item.product?.image || "https://via.placeholder.com/150"}
                       alt={item.product?.name}
@@ -118,7 +131,7 @@ const Cart = ({ wishlist, setWishlist }) => {
                       </p>
                     </div>
 
-                    {/* Delete Icon */}
+                    {/* Trash Icon */}
                     <button
                       className="btn ms-auto"
                       onClick={(e) => {
@@ -152,7 +165,6 @@ const Cart = ({ wishlist, setWishlist }) => {
                           minWidth: "250px",
                         }}
                       >
-                        {/* Close */}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -199,7 +211,6 @@ const Cart = ({ wishlist, setWishlist }) => {
               ))}
             </div>
 
-            {/* 🧾 Grand Total */}
             <div className="text-end mt-4">
               <h4 className="fw-bold">Grand Total: ₹{grandTotal}</h4>
             </div>

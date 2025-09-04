@@ -3,16 +3,17 @@ import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
 
 const MyOrders = () => {
-  const { user } = useAuth(); 
+  const { user } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // ✅ Fetch Orders
   useEffect(() => {
     if (!user) return;
 
     const fetchOrders = async () => {
       try {
-        const token = localStorage.getItem("token"); // ✅ ensure token from storage
+        const token = localStorage.getItem("token");
         const res = await axios.get("http://localhost:4000/api/orders/my", {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -26,6 +27,30 @@ const MyOrders = () => {
 
     fetchOrders();
   }, [user]);
+
+  // ✅ Cancel Order
+  const cancelOrder = async (orderId) => {
+    if (!window.confirm("Are you sure you want to cancel this order?")) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.put(
+        `http://localhost:4000/api/orders/${orderId}/cancel`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // ✅ Update UI instantly
+      setOrders((prev) =>
+        prev.map((o) => (o._id === orderId ? { ...o, status: "Cancelled" } : o))
+      );
+
+      alert("✅ Order cancelled successfully!");
+    } catch (err) {
+      console.error("❌ Cancel failed:", err.response?.data || err.message);
+      alert(err.response?.data?.message || "Failed to cancel order!");
+    }
+  };
 
   if (!user) {
     return (
@@ -58,9 +83,10 @@ const MyOrders = () => {
                   <th>#Order ID</th>
                   <th>Items</th>
                   <th>Total Amount</th>
-                  <th>Payment</th> {/* ✅ New Column */}
+                  <th>Payment</th>
                   <th>Status</th>
                   <th>Date</th>
+                  <th>Action</th> {/* ✅ New Column */}
                 </tr>
               </thead>
               <tbody>
@@ -84,14 +110,16 @@ const MyOrders = () => {
                             />
                           )}
                           <span>
-                            {(item.name || item.product?.name || "Unnamed Product")} x {item.quantity}
+                            {(item.name ||
+                              item.product?.name ||
+                              "Unnamed Product")}{" "}
+                            x {item.quantity}
                           </span>
                         </div>
                       ))}
                     </td>
                     <td>₹{order.totalAmount}</td>
 
-                    {/* ✅ Payment Method */}
                     <td>
                       {order.paymentInfo?.method === "Online" ? (
                         <span className="badge bg-info">Online</span>
@@ -114,6 +142,21 @@ const MyOrders = () => {
                       </span>
                     </td>
                     <td>{new Date(order.createdAt).toLocaleDateString()}</td>
+
+                    {/* ✅ Cancel Button */}
+                    <td>
+                      {order.status !== "Delivered" &&
+                      order.status !== "Cancelled" ? (
+                        <button
+                          onClick={() => cancelOrder(order._id)}
+                          className="btn btn-sm btn-danger"
+                        >
+                          Cancel
+                        </button>
+                      ) : (
+                        "-"
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

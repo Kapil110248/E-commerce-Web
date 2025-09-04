@@ -59,7 +59,7 @@ const ManageOrders = () => {
       <div className="card shadow-sm mb-3">
         <div className="card-body d-flex gap-2 align-items-center">
           <span className="text-muted">Filter:</span>
-          {["All", ...statuses].map((s) => (
+          {["All", "Cancelled", ...statuses].map((s) => (
             <button
               key={s}
               className={`btn btn-sm ${
@@ -84,11 +84,14 @@ const ManageOrders = () => {
                 <tr>
                   <th>#Order</th>
                   <th>Customer</th>
+                  <th>Mobile</th>
                   <th>Items</th>
                   <th>Total</th>
-                  <th>Payment</th> {/* ✅ New column */}
+                  <th>Payment</th>
                   <th>Status</th>
-                  {user?.role === "admin" && <th style={{ width: 260 }}>Update</th>}
+                  {user?.role === "admin" && (
+                    <th style={{ width: 260 }}>Update</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -96,7 +99,33 @@ const ManageOrders = () => {
                   <tr key={o._id}>
                     <td>{o._id.slice(-6)}</td>
                     <td>{o.user?.name || "-"}</td>
-                    <td>{o.items?.reduce((s, i) => s + i.quantity, 0) || 0}</td>
+
+                    {/* ✅ Mobile Number + Call Button */}
+                    <td>
+                      {o.user?.mobile ? (
+                        <>
+                          <span>{o.user.mobile}</span>{" "}
+                          <a
+                            href={`tel:${o.user.mobile}`}
+                            className="btn btn-sm "
+                          >
+                            📞 
+                          </a>
+                        </>
+                      ) : (
+                        <span className="text-muted">N/A</span>
+                      )}
+                    </td>
+
+                    {/* ✅ Product Names + Quantity */}
+                    <td>
+                      {o.items?.map((item, idx) => (
+                        <div key={idx}>
+                          {item.product?.name || item.name} × {item.quantity}
+                        </div>
+                      ))}
+                    </td>
+
                     <td>₹{o.totalAmount}</td>
 
                     {/* ✅ Payment Method */}
@@ -104,29 +133,47 @@ const ManageOrders = () => {
                       {o.paymentInfo?.method === "Online" ? (
                         <span className="badge bg-info">Online</span>
                       ) : (
-                        <span className="badge bg-secondary">Cash on Delivery</span>
+                        <span className="badge bg-secondary">
+                          Cash on Delivery
+                        </span>
                       )}
                     </td>
 
+                    {/* ✅ Status Badge */}
                     <td>
-                      <span className="badge bg-secondary">{o.status}</span>
+                      <span
+                        className={`badge ${
+                          o.status === "Delivered"
+                            ? "bg-success"
+                            : o.status === "Cancelled"
+                            ? "bg-danger"
+                            : "bg-warning"
+                        }`}
+                      >
+                        {o.status}
+                      </span>
                     </td>
 
+                    {/* ✅ Update Buttons only if Admin & NOT Cancelled */}
                     {user?.role === "admin" && (
                       <td className="d-flex gap-2">
-                        {statuses.map((s) => (
-                          <button
-                            key={s}
-                            className={`btn btn-sm ${
-                              o.status === s
-                                ? "btn-primary"
-                                : "btn-outline-primary"
-                            }`}
-                            onClick={() => updateStatus(o._id, s)}
-                          >
-                            {s}
-                          </button>
-                        ))}
+                        {o.status === "Cancelled" ? (
+                          <span className="text-muted">Not Editable</span>
+                        ) : (
+                          statuses.map((s) => (
+                            <button
+                              key={s}
+                              className={`btn btn-sm ${
+                                o.status === s
+                                  ? "btn-primary"
+                                  : "btn-outline-primary"
+                              }`}
+                              onClick={() => updateStatus(o._id, s)}
+                            >
+                              {s}
+                            </button>
+                          ))
+                        )}
                       </td>
                     )}
                   </tr>
@@ -134,7 +181,7 @@ const ManageOrders = () => {
                 {!filtered.length && (
                   <tr>
                     <td
-                      colSpan={user?.role === "admin" ? "7" : "6"}
+                      colSpan={user?.role === "admin" ? "8" : "7"}
                       className="text-center py-4"
                     >
                       No orders

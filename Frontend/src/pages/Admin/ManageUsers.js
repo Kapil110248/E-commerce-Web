@@ -42,7 +42,7 @@ const ManageUsers = () => {
   };
 
   const filtered = users.filter((u) =>
-    `${u.name} ${u.email} ${u.role}`
+    `${u.name} ${u.email} ${u.role} ${u.mobile || ""}`
       .toLowerCase()
       .includes(search.toLowerCase())
   );
@@ -55,7 +55,7 @@ const ManageUsers = () => {
         <div className="card-body d-flex justify-content-between align-items-center">
           <input
             className="form-control w-50"
-            placeholder="Search users by name/email/role"
+            placeholder="Search users by name/email/mobile/role"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -71,6 +71,7 @@ const ManageUsers = () => {
                 <th>#ID</th>
                 <th>Name</th>
                 <th>Email</th>
+                <th>Mobile</th> {/* ✅ New Column */}
                 <th>Role</th>
                 <th>Status</th>
                 <th style={{ width: 220 }}>Actions</th>
@@ -82,6 +83,7 @@ const ManageUsers = () => {
                   <td>{i + 1}</td>
                   <td>{u.name}</td>
                   <td>{u.email}</td>
+                  <td>{u.mobile || "-"}</td> {/* ✅ Mobile number show */}
                   <td>
                     <span className="badge bg-info">{u.role}</span>
                   </td>
@@ -112,7 +114,7 @@ const ManageUsers = () => {
               ))}
               {!filtered.length && (
                 <tr>
-                  <td colSpan="6" className="text-center py-4">
+                  <td colSpan="7" className="text-center py-4">
                     No users found
                   </td>
                 </tr>

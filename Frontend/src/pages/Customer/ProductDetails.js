@@ -5,6 +5,7 @@ import "react-toastify/dist/ReactToastify.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 import DynamicButton from "../../components/dynamicButton/dynamicButton";
 import orderService from "../../services/orderService";
+import cartService from "../../services/cartService"; 
 import { useAuth } from "../../context/AuthContext";
 
 const ProductDetails = ({ cart, setCart }) => {
@@ -14,43 +15,46 @@ const ProductDetails = ({ cart, setCart }) => {
   const [paymentMethod, setPaymentMethod] = useState("COD");
 
   const { user } = useAuth();
+  const token = user?.token;
 
   if (!product) {
     return <div className="text-center mt-5">❌ No product details found!</div>;
   }
 
-  // ✅ Add to Cart
-  const addToCart = () => {
+  // ✅ Add to Cart (Backend + Local State)
+  const addToCart = async () => {
+    if (!token) {
+      toast.error("⚠️ Please login to add items in cart!");
+      return;
+    }
+
     if (product.stock <= 0) {
       toast.error("⚠️ Product is out of stock!");
       return;
     }
 
-    setCart((prevCart) => {
-      const existingItem = prevCart.find(
-        (item) => item._id === product._id || item.id === product.id
+    try {
+      // Backend call with token
+      const updatedCart = await cartService.addToCart(
+        product._id || product.id,
+        quantity,
+        token
       );
 
-      if (existingItem) {
-        // agar already cart me hai → quantity update karo
-        return prevCart.map((item) =>
-          item._id === product._id || item.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
-        );
-      } else {
-        // new product add karo
-        return [...prevCart, { ...product, quantity }];
-      }
-    });
+      // Sync local state with backend response
+      setCart(Array.isArray(updatedCart) ? updatedCart : updatedCart.cart || []);
 
-    toast.success(`${product.name || product.title} added to cart 🛒`);
+      toast.success(`${product.name || product.title} added to cart 🛒`);
+    } catch (err) {
+      console.error("❌ Add to Cart Error:", err.response?.data || err);
+      toast.error(err.response?.data?.message || "Failed to add item to cart!");
+    }
   };
 
   // ✅ Buy Now → Place Order
   const buyNow = async () => {
-    if (!user) {
-      toast.error("Please login to place an order!");
+    if (!token) {
+      toast.error("⚠️ Please login to place an order!");
       return;
     }
 
@@ -74,11 +78,12 @@ const ProductDetails = ({ cart, setCart }) => {
           postalCode: user?.address?.postalCode || "000000",
           country: "India",
         },
+        totalAmount: product.price * quantity,
       };
 
       console.log("🛒 Sending Order:", JSON.stringify(order, null, 2));
 
-      const res = await orderService.placeOrder(order);
+      const res = await orderService.placeOrder(order, token);
 
       if (paymentMethod === "COD") {
         toast.success(
@@ -129,7 +134,15 @@ const ProductDetails = ({ cart, setCart }) => {
           <p className="mb-2">
             <strong>Category:</strong> {product.category}
           </p>
-          <p className="fw-bold mb-3">Price: ₹{product.price}</p>
+
+          {/* ✅ Price calculation */}
+          <p className="fw-bold mb-3">
+            Price: ₹{product.price} × {quantity} ={" "}
+            <span className="text-primary">
+              ₹{product.price * quantity}
+            </span>
+          </p>
+
           <p
             className={`mb-3 ${
               product.stock > 0 ? "text-success" : "text-danger"

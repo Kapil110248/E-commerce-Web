@@ -2,7 +2,6 @@ import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 
 // ============================
-// ============================
 // Create Order
 export const createOrder = async (req, res) => {
   try {
@@ -48,10 +47,10 @@ export const createOrder = async (req, res) => {
       admin: adminId,
       items: mappedItems,
       totalAmount,
-      shippingAddress,
+      shippingAddress, // phone optional rahega yahan bhi
       paymentInfo: {
         method: paymentMethod === "Online" ? "Online" : "COD",
-        txnId: paymentMethod === "Online" ? `TXN-${Date.now()}` : null, // 🔥 dummy txnId
+        txnId: paymentMethod === "Online" ? `TXN-${Date.now()}` : null,
       },
     });
 
@@ -62,12 +61,45 @@ export const createOrder = async (req, res) => {
 };
 
 
+
+// ============================
+// Cancel Order (Customer)
+export const cancelOrder = async (req, res) => {
+  try {
+    const order = await Order.findOne({ _id: req.params.id, user: req.user._id });
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    if (order.status === "Delivered") {
+      return res
+        .status(400)
+        .json({ message: "Delivered orders cannot be cancelled" });
+    }
+
+    if (order.status === "Cancelled") {
+      return res.status(400).json({ message: "Order already cancelled" });
+    }
+
+    order.status = "Cancelled";
+    await order.save();
+
+    res.json({ message: "Order cancelled", order });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ============================
+// Admin Orders
 // ============================
 // My Orders
 export const getMyOrders = async (req, res) => {
   try {
     const orders = await Order.find({ user: req.user._id })
-      .populate("items.product", "name image price"); // ✅ Product image bhi aaye
+      .populate("items.product", "name image price")
+      .populate("user", "name email mobile"); // ✅ include mobile
 
     res.json(orders);
   } catch (err) {
@@ -82,7 +114,7 @@ export const getAdminOrders = async (req, res) => {
   try {
     const orders = await Order.find({ admin: req.user._id })
       .populate("items.product", "name image price")
-      .populate("user", "name email")
+      .populate("user", "name email mobile") // ✅ include mobile
       .sort("-createdAt");
 
     res.json(orders);
@@ -91,6 +123,7 @@ export const getAdminOrders = async (req, res) => {
   }
 };
 
+
 // ============================
 // Update Order Status (Admin)
 export const updateOrderStatus = async (req, res) => {
@@ -98,7 +131,7 @@ export const updateOrderStatus = async (req, res) => {
     const { status } = req.body;
 
     const order = await Order.findOneAndUpdate(
-      { _id: req.params.id, admin: req.user._id }, // ✅ sirf apne orders update kar paaye
+      { _id: req.params.id, admin: req.user._id },
       { status },
       { new: true }
     );

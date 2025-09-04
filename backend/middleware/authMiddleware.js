@@ -3,17 +3,23 @@ import User from "../models/User.js";
 
 export const protect = async (req, res, next) => {
   try {
-    const token =
-      req.cookies.token ||
-      (req.headers.authorization &&
-        req.headers.authorization.startsWith("Bearer") &&
-        req.headers.authorization.split(" ")[1]);
+    let token = null;
 
-    if (!token) {
-      return res.status(401).json({ message: "Not authorized, no token" });
+    // ✅ Always prefer Authorization header
+    if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
+      token = req.headers.authorization.split(" ")[1];
+    } else if (req.cookies.token) {
+      token = req.cookies.token;
+    }
+
+    console.log("🔑 Raw Token Received:", token); // 👈 Debug log
+
+    if (!token || token === "null" || token === "undefined") {
+      return res.status(401).json({ message: "Invalid or missing token" });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log("✅ Decoded Token:", decoded); // 👈 Debug log
 
     // ✅ If Admin
     if (decoded.role === "admin") {
@@ -34,7 +40,7 @@ export const protect = async (req, res, next) => {
     req.user = user;
     next();
   } catch (err) {
-    console.error("Auth Middleware Error:", err);
+    console.error("Auth Middleware Error:", err.message);
     res.status(401).json({ message: "Not authorized, token failed" });
   }
 };

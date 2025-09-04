@@ -125,7 +125,7 @@ export const login = async (req, res) => {
 export const logout = async (_req, res) => {
   res.clearCookie("token", {
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: process.env.NODE_ENV === "production",  
   });
   res.json({ message: "Logged out" });
 };

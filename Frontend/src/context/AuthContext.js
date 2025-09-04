@@ -26,10 +26,10 @@ export const AuthProvider = ({ children }) => {
       try {
         const me = await getMeApi();
 
-        // ✅ Ensure role is always present
         const userWithRole = {
           ...me,
           role: me.role || "customer",
+          token, // ✅ keep token in user object
         };
 
         setUser(userWithRole);
@@ -51,10 +51,10 @@ export const AuthProvider = ({ children }) => {
     }
 
     if (data.user) {
-      // ✅ Ensure role is always present
       const userWithRole = {
         ...data.user,
         role: data.user.role || "customer",
+        token: data.token, // ✅ attach token here too
       };
 
       setUser(userWithRole);
